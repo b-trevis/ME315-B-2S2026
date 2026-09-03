@@ -1,0 +1,25 @@
+Os exercícios a seguir fazem referência à tabela EMPLOYEE
+
+10. Assuma que você não sabe nada sobre essa tabela, exceto que ela possui um número pequeno de linhas.
+Exiba todos os dados contidos nessa tabela.
+
+SELECT * FROM EMPLOYEE
+
+11. Exiba todas as informações sobre qualquer funcionário cujo valor de salário (SALARY) exceda $1.000,00.
+
+SELECT * FROM EMPLOYEE
+WHERE SALARY > 1000
+
+12.Exiba todas as informações sobre o funcionário 2000 (ENO é igual a 2000).
+
+SELECT * FROM EMPLOYEE
+WHERE ENO = 2000
+
+13.Exiba os valores de ENAME e DNO de todos os funcionários.
+
+SELECT ENAME, ENO FROM EMPLOYEE
+
+14.Exiba os valores de ENAME e SALARY de todos os funcionários cujo valor de salário seja inferior a $1.000,00.
+
+SELECT ENAME, SALARY FROM EMPLOYEE
+WHERE SALARY < 1000
