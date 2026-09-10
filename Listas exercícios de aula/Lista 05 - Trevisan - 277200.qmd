@@ -1,0 +1,195 @@
+---
+title: "Lista 05 - Trevisan - 277200"
+author: "Bruce Trevisan"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(DBI)
+library(RSQLite)
+
+con <- dbConnect(RSQLite::SQLite(), "./me315.sqlite")
+```
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+```
+
+```{sql connection=con}
+SELECT * FROM EMPLOYEE
+```
+
+## Expressões Aritméticas
+
+### 1. Suponha que estejamos interessados em aterar taxas de entrada em reservas naturais localizadas no Arizona. Assim, quatro propostas de alteração foram definidas:
+
+### A. Aumentar a taxa em US\$ 1,50;
+
+### B. Diminuir a taxa em US\$ 1,00;
+
+### C. Dobrar a taxa atual;
+
+### D. Reduzir pela metade a taxa atual.
+
+## Mostre uma tabela com as taxas atuais e as quatro propostas de alteração.
+
+```{sql connection=con}
+SELECT 
+    *,
+    STATE,
+    FEE AS TAXA_ATUAL,
+    FEE + 1.50 AS PROPOSTA_A,
+    FEE - 1.00 AS PROPOSTA_B,        
+    FEE * 2 AS PROPOSTA_C,
+    FEE / 2.0 AS PROPOSTA_D
+FROM PRESERVE
+WHERE STATE = 'AZ';
+```
+
+### 2. Para cada reserva natural localizada em Montana, apresente os valores de PNAME e ACRES. Qual é a metade da área de cada reserva? Há alguma diferença entre dividir ACRES por 2.0 e por 2?
+
+```{sql connection=con}
+SELECT 
+    PNAME, 
+    ACRES, 
+    ACRES / 2.0 AS METADE_ACRES
+FROM PRESERVE
+WHERE STATE = 'MT'
+
+-- Se eu dividir por somente 2, ele arredenda o valor, por exemplo, 3 / 2 = 1 e não 1.5, mas se eu dividir por 2.0, ele não arredonda e mostra 3 / 2.0 = 1.5 
+```
+
+### 3. Apresente os valores de PNAME e FEE das reservas naturais localizadas no Arizona. Apresente também o resultado de adicionar USD\$ 1,50 a cada valor de FEE e o resultado de subtrair USD\$ 1,00 de cada valor de FEE. Para cada uma das colunas calculadas, especifique um alias: AUMENTO para a coluna resultante da adição e DIMINUICAO para a coluna resultante da subtração.
+
+```{sql connection=con}
+SELECT 
+    PNAME, 
+    FEE, 
+    FEE + 1.50 AS AUMENTO, 
+    FEE - 1.00 AS DIMINUICAO
+FROM PRESERVE
+WHERE STATE = 'AZ'
+```
+
+# Atenção
+
+## - Os aliases podem ser utilizados na cláusula ORDER BY, mas não na cláusula WHERE.
+
+## - Isso ocorre porque a cláusula WHERE é processada antes da definição dos aliases, enquanto a cláusula ORDER BY é processada depois.
+
+### 4. Para cada reserva natural localizada no Arizona, apresente seu nome, seguido pelo resultado da divisão do valor de ACRES pelo valor de FEE. Exclua as reservas cujo valor de FEE seja igual a zero.
+
+```{sql connection=con}
+SELECT
+    PNAME,
+    ACRES,
+    FEE,
+    ACRES / (FEE * 1.0) AS RAZAO_ACRES_FEE
+FROM PRESERVE
+WHERE STATE = 'AZ' 
+  AND FEE > 0;
+```
+
+# Hierarquia SQL
+
+A hierarquia dos operadores aritméticos em SQL é a mesma que você aprendeu no ensino fundamental.
+
+## 1º. As operações de multiplicação e divisão são avaliadas primeiro, seguindo uma leitura da expressão da esquerda para a direita.
+
+## 2º. Em seguida, as operações de adição e subtração são avaliadas, também seguindo uma leitura da esquerda para a direita.
+
+## 3º. O uso de parênteses pode alterar a ordem de avaliação. As expressões dentro dos parênteses são avaliadas primeiro.
+
+### 5. Para cada reserva natural localizada no Arizona, apresente seu nome, seguido pelo resultado de adicionar 1000 ao valor de ACRES e, em seguida, dividir o resultado pelo valor de FEE. Exclua qualquer registro cujo valor de FEE seja igual a zero.
+
+```{sql connection=con}
+SELECT
+    PNAME,
+    ACRES,
+    (1.0 * ACRES + 1000) / FEE
+FROM PRESERVE 
+WHERE STATE = 'AZ'
+AND FEE > 0
+```
+
+### 6. Suponha que a área de cada reserva natural seja triplicada. Apresente o nome e a área de uma reserva se o valor de sua área ajustada exceder 100.000 acres.
+
+```{sql connection=con}
+SELECT
+    PNAME,
+    ACRES,
+    ACRES * 3 AS ACRES_TRIPLICADO
+FROM PRESERVE 
+WHERE ACRES * 3 > 100000 
+```
+
+### 7. Apresente a soma de todos os valores de ACRES da tabela PRESERVE.
+
+```{sql connection=con}
+SELECT SUM(ACRES) AS SOMA_ACRES
+FROM PRESERVE
+```
+
+### 8. Apresente a área média, em acres, das reservas naturais de Massachusetts.
+
+```{sql connection=con}
+SELECT AVG(ACRES) AS MEDIA_ACRES
+FROM PRESERVE
+WHERE STATE = 'MA'
+```
+
+### 9. Apresente a menor e a maior taxa de entrada da tabela PRESERVE.
+
+```{sql connection=con}
+SELECT MIN(FEE) AS MENOR_TAXA,
+       MAX(FEE) AS MAIOR_TAXA
+FROM PRESERVE
+```
+
+### 10. O que acontece se aplicarmos MIN() e MAX em cocunas de texto?. Aplique ambas funções na coluna PNAME
+
+```{sql connection=con}
+-- Se aplicar min e max em colunas de texto, ele faz pela ordem alfabética.
+
+SELECT MIN(PNAME) AS MIN_PNAME,
+       MAX(PNAME) AS MAX_PNAME
+FROM PRESERVE
+```
+
+## `Observação`: Não podemos utilizar funções agregadas na clausula WHERE
+
+### 11. Mostre o número de registros da tabela PRESERVE. Utilize CTPRESERVE como nome da coluna que apresenta esse resultado.
+
+```{sql connection=con}
+SELECT COUNT(DISTINCT PNO) AS CTPRESERVE
+FROM PRESERVE
+```
+
+### 12. Quantos estados diferentes possuem reservas naturais descritas na tabela PRESERVE? Utilize CTSTATE como nome da coluna que apresenta esse resultado.
+
+```{sql connection=con}
+SELECT COUNT(DISTINCT STATE) AS CTSTATE
+FROM PRESERVE
+```
+
+### 13. Calcule e apresente dois totais resumidos:
+
+### A. O primeiro total é a soma de todas as taxas de entrada, considerando que cada taxa tenha sido aumentada em US\$ 5,00.
+
+```{sql connection=con}
+SELECT SUM(FEE + 5.00) AS SOMA_FEE_VALOR_NOVO
+FROM PRESERVE 
+```
+
+### B. O segundo total é o resultado de adicionar US\$ 5,00 à soma de todas as taxas de entrada.
+
+```{sql connection=con}
+SELECT SUM(FEE) + 5.00 AS SOMA_TOTAL_MAIS_CINCO
+FROM PRESERVE;
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
