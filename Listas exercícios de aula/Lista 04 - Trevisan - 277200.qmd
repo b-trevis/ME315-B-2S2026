@@ -1,0 +1,160 @@
+---
+title: "Lista 04 - Trevisan - 277200"
+author: "Bruce Trevisan"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(DBI)
+library(RSQLite)
+
+# Conecta/Cria o arquivo
+con <- dbConnect(RSQLite::SQLite(), "./me315.sqlite")
+```
+
+## IN e BETWEEN
+
+### 1. Exiba os valores de PNO, PNAME e ACRES de qualquer reserva natural que possua um valor de ACRES igual a um dos seguintes valores: {40, 90, 630, 660}.
+
+```{sql connection=con}
+SELECT PNO, PNAME, ACRES FROM PRESERVE
+WHERE ACRES IN (40,90,630,660)
+```
+
+
+### 2. Exiba o PNO, PNAME e STATE de qualquer reserva natural que não esteja localizada no Arizona e não esteja localizada em Montana.
+
+```{sql connection=con}
+SELECT PNO, PNAME, STATE FROM PRESERVE 
+WHERE NOT STATE IN ('MT', 'AZ')
+```
+
+
+### 3. Exiba todas as informações sobre as seguintes reservas naturais: DANCING PRAIRIE, MULESHOE RANCH, MCELWAIN-OLSEN e TATKON.
+
+```{sql connection=con}
+SELECT * FROM PRESERVE 
+WHERE PNAME IN ("DANCING PRAIRIE", "MULESHOE RANCH", "MCELWAIN-OLSEN", "TATKON")
+```
+
+
+### 4. Exiba o nome e o tamanho de qualquer reserva natural onde seu tamanho esteja entre, ou inclua, 830 e 15.000 acres.
+
+```{sql connection=con}
+SELECT PNAME, ACRES FROM PRESERVE
+WHERE ACRES BETWEEN 830 AND 15000
+ORDER BY ACRES
+```
+
+
+### 5. Exiba o nome e o tamanho de qualquer reserva natural onde seu tamanho não esteja entre 830 e 15.000 acres.
+
+```{sql connection=con}
+SELECT PNAME, ACRES FROM PRESERVE
+WHERE NOT ACRES BETWEEN 830 AND 15000
+ORDER BY ACRES
+```
+
+
+### 6. Exiba o nome de todas as reservas naturais que possuem um nome que, com base em uma sequência alfabética (de ordenação), esteja entre e incluindo as strings ‘M’ e ‘MZZZ’.
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME BETWEEN 'M' AND 'MZZZ'
+ORDER BY PNAME
+```
+
+
+### 7. Exiba os valores de PNAME, STATE, ACRES e FEE de todas as reservas naturais que estejam localizadas em Montana ou no Arizona e tenham um tamanho maior ou igual a 660 acres e menor ou igual a 10.000 acres, ou qualquer outra reserva que possua uma taxa de entrada de $0,00. Ordene o resultado pela coluna PNAME em sequência ascendente.
+
+```{sql connection=con}
+SELECT PNAME, STATE, ACRES, FEE FROM PRESERVE 
+WHERE (STATE IN ('MT', 'AZ') AND ACRES BETWEEN 660 AND 10000) OR FEE IN (0)
+ORDER BY PNAME
+```
+
+### 8. Exiba todos os registros da coluna CHARNAME da tabela DEMO1 que começam com ‘MA’.
+
+```{r}
+con_demo <- dbConnect(RSQLite::SQLite(), "demo1.sqlite")
+dados_demo <- dbReadTable(con_demo, "DEMO1")
+dbWriteTable(con, "DEMO1", dados_demo, overwrite = TRUE)
+dbDisconnect(con_demo)
+```
+
+```{sql connection=con}
+SELECT * FROM DEMO1
+```
+
+
+```{sql connection=con}
+SELECT CHARNAME FROM DEMO1
+WHERE CHARNAME LIKE 'MA%'
+```
+
+### 9. Exiba todos os registros da coluna VCHARNAME da tabela DEMO1 que começam com ‘MA’.
+
+```{sql connection=con}
+SELECT VCHARNAME FROM DEMO1
+WHERE VCHARNAME LIKE 'MA%'
+```
+
+### 10. Exiba todos os registros da coluna CHARNAME da tabela DEMO1 que contenham a letra ‘E’ em algum lugar do texto’.
+
+```{sql connection=con}
+SELECT CHARNAME FROM DEMO1
+WHERE CHARNAME LIKE '%E%'
+```
+
+### 11. Exiba todos os registros da coluna VCHARNAME da tabela DEMO1 que contenham a letra ‘E’ em algum lugar do texto’.
+
+```{sql connection=con}
+SELECT VCHARNAME FROM DEMO1
+WHERE VCHARNAME LIKE '%E%'
+```
+
+
+### 12. Exiba todos os registros da coluna VCHARNAME da tabela DEMO1 que terminem em ‘ON’
+
+```{sql connection=con}
+SELECT VCHARNAME FROM DEMO1
+WHERE VCHARNAME LIKE '%ON'
+```
+
+### 13. Exiba todos os registros da coluna CHARNAME da tabela DEMO1 que terminem em ‘ON’
+
+```{sql connection=con}
+SELECT CHARNAME FROM DEMO1
+WHERE CHARNAME LIKE '%ON'
+```
+
+### 14. Exiba todos os valores de CHARNAME da tabela DEMO1 que possuem a letra ‘S’ na quinta posição de string.
+
+```{sql connection=con}
+SELECT CHARNAME FROM DEMO1
+WHERE CHARNAME LIKE '____S%'
+```
+
+
+### 15. Repita 14 mas utilizando CHARNAME
+
+```{sql connection=con}
+SELECT VCHARNAME FROM DEMO1
+WHERE VCHARNAME LIKE '____S%'
+```
+
+### 16. Exiba cada valor de VCHARNAME que possua as letras ON na sexta e na sétima posição.
+
+```{sql connection=con}
+SELECT VCHARNAME FROM DEMO1
+WHERE VCHARNAME LIKE '_____ON%'
+```
+
+### 17. Exiba qualquer valor de CHARNAME que tenha ‘ID’ na quarta e quinta posições ou que tenha ‘ID’ na quinta e sexta posições.
+
+```{sql connection=con}
+SELECT CHARNAME FROM DEMO1
+WHERE CHARNAME LIKE '___ID%' OR CHARNAME LIKE '____ID%'
+```
+
