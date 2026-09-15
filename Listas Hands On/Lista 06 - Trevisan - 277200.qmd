@@ -1,0 +1,96 @@
+---
+title: "Lab 06"
+author: "Bruce Trevisan"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(DBI)
+library(RSQLite)
+library(dplyr)
+
+# Conecta/Cria o arquivo
+con <- dbConnect(RSQLite::SQLite(), "./me315.sqlite")
+```
+
+### 1. Baixe o arquivo disco.db e armazene na variável path o caminho completo (pasta) na qual o arquivo foi gravado. Utilize o comando file.path() para combinar a variável path com o nome do arquivo (disco.db) e obter o nome do arquivo com seu respectivo caminho. Armazene este resultado na variável fname.
+
+```{r}
+path <- getwd()
+fname <- file.path(path, "disco.db")
+```
+
+### 2. Utilizando o pacote RSQLite, conecte-se ao arquivo de banco de dados. Armazene a conexão na variável conn.
+
+```{r}
+conn <- dbConnect(SQLite(), dbname = fname)
+```
+
+### 3. Liste as tabelas existentes no banco de dados.
+
+```{r}
+dbListTables(conn)
+```
+
+### 4. Identifique os nomes de todas as colunas existentes na tabela customers.
+
+```{sql connection=conn}
+SELECT name FROM pragma_table_info('customers')
+```
+
+### 5. Utilizando apenas SQLite, com o apoio do comando dbGetQuery, identifique quantos clientes estão atualmente cadastrados neste banco de dados.
+
+```{r}
+dbGetQuery(conn, "SELECT COUNT(DISTINCT CustomerId) AS Num_Clientes FROM CUSTOMERS")
+```
+
+### 6. Utilizando apenas SQLite, identifique o número de países diferentes em que moram os clientes encontrados acima.
+
+```{r}
+dbGetQuery(conn, "SELECT COUNT(DISTINCT Country) AS Paises FROM CUSTOMERS")
+```
+
+### 7. Utilizando apenas SQLite, quantos clientes existem por país? A tabela resultante deve conter o nome do país e a respectiva contagem, além de ser ordenada de maneira decrescente pela referida contagem.
+
+```{sql connection=conn}
+SELECT COUNTRY, COUNT(*) AS Num_Clientes FROM customers
+GROUP BY Country
+ORDER BY Num_Clientes DESC
+```
+
+### 8. Quais são os 5 países com mais clientes registrados? Use apenas SQLite.
+
+```{sql connection=conn}
+SELECT COUNTRY, COUNT(*) AS Num_Clientes FROM customers
+GROUP BY Country
+ORDER BY Num_Clientes DESC
+LIMIT 5
+```
+
+### 9. Quais são os países registrados que possuem apenas 6 letras no nome?
+
+```{sql connection=conn}
+SELECT DISTINCT COUNTRY FROM customers
+WHERE Country LIKE '______'
+```
+
+### 10. Quais foram as músicas compradas por clientes brasileiros?
+
+```{sql connection=conn}
+SELECT DISTINCT tracks.Name FROM tracks
+JOIN invoice_items ON tracks.TrackId = invoice_items.TrackId
+JOIN invoices      ON invoice_items.InvoiceId = invoices.InvoiceId
+JOIN customers     ON invoices.CustomerId = customers.CustomerId
+WHERE customers.Country = 'Brazil'
+ORDER BY tracks.Name
+```
+### 11. Desconecte do banco de dados.
+```{r}
+dbDisconnect(conn)
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
