@@ -1,0 +1,185 @@
+---
+title: "Lab 05 Especial - Trevisan - 277200"
+author: "Bruce Trevisan"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(leaflet)
+library(ggcal)
+library(readr)
+```
+
+```{r}
+# Consulta de nome das colunas dos arquivos
+colunas_flights <- colnames(read_csv("flights.csv.zip", n_max = 0, show_col_types = FALSE))
+
+print(colunas_flights)
+```
+```{r}
+# Para mostrar nomes de linha de voos diferentes do enunciado
+primeiros_nomes <- read_csv(
+  file = "flights.csv.zip",
+  col_select = "TAIL_NUMBER", 
+  n_max = 5,                
+  show_col_types = FALSE
+)
+
+print(primeiros_nomes)
+
+# Tanto que a linha de voo escolhida foi a 5º dessa lista 
+```
+
+```{r}
+# Leitura de arquivo
+analisa_aeronave <- function(tail_number, arquivo, arquivo_airports = "airports.csv") {
+  
+  dados_aeroportos <- read_csv(
+    arquivo_airports,
+    show_col_types = FALSE
+  ) %>%
+    select(
+      codigo_aeroporto = IATA_CODE,
+      nome_aeroporto = AIRPORT,
+      cidade = CITY,
+      latitude = LATITUDE,
+      longitude = LONGITUDE
+    ) %>%
+    filter(!is.na(latitude), !is.na(longitude))
+
+  # Leitura do flights em chunks
+  callback_filtra_aeronave <- function(chunk, pos) {
+    chunk %>% filter(TAIL_NUMBER == tail_number)
+  }
+
+  tabela_voos_filtrada <- read_csv_chunked(
+    file = arquivo,
+    callback = DataFrameCallback$new(callback_filtra_aeronave),
+    chunk_size = 500000,
+    show_col_types = FALSE
+  )
+
+  # Validação de carregamento
+  if (nrow(tabela_voos_filtrada) == 0) {
+    stop(paste("Nenhum voo encontrado para a aeronave:", tail_number))
+  }
+
+  tabela_trajetos_tidy <- tabela_voos_filtrada %>%
+    filter(
+      CANCELLED == 0,
+      !is.na(DEPARTURE_TIME),
+      !is.na(AIR_TIME),
+      AIR_TIME > 0
+    ) %>%
+    mutate(
+      horario_saida_formatado = sprintf("%s", DEPARTURE_TIME),
+      data_hora_partida = as.POSIXct(
+        paste(
+          YEAR, MONTH, DAY,
+          substr(horario_saida_formatado, 1, 2),
+          substr(horario_saida_formatado, 3, 4)
+        ),
+        format = "%Y %m %d %H %M"
+      ),
+      velocidade_media_mph = (DISTANCE / AIR_TIME) * 60
+    ) %>%
+    arrange(data_hora_partida)
+
+  # Junção dos dados
+  tabela_com_coordenadas <- tabela_trajetos_tidy %>%
+    inner_join(
+      dados_aeroportos, 
+      by = c("ORIGIN_AIRPORT" = "codigo_aeroporto")
+    ) %>%
+    rename(
+      lat_origem = latitude, 
+      lng_origem = longitude,
+      nome_origem = nome_aeroporto
+    ) %>%
+    inner_join(
+      dados_aeroportos, 
+      by = c("DESTINATION_AIRPORT" = "codigo_aeroporto")
+    ) %>%
+    rename(
+      lat_destino = latitude, 
+      lng_destino = longitude,
+      nome_destino = nome_aeroporto
+    )
+
+  # Mapa
+  mapa_trajeto <- leaflet() %>%
+    addProviderTiles(providers$CartoDB.Positron)
+
+  aeroportos_unicos <- bind_rows(
+    tabela_com_coordenadas %>% select(codigo = ORIGIN_AIRPORT, nome = nome_origem, lat = lat_origem, lng = lng_origem),
+    tabela_com_coordenadas %>% select(codigo = DESTINATION_AIRPORT, nome = nome_destino, lat = lat_destino, lng = lng_destino)
+  ) %>% distinct(codigo, .keep_all = TRUE)
+
+  mapa_trajeto <- mapa_trajeto %>%
+    addCircleMarkers(
+      data = aeroportos_unicos,
+      lng = ~lng,
+      lat = ~lat,
+      popup = ~paste0("<b>Aeroporto:</b> ", nome, " (", codigo, ")"),
+      radius = 4,
+      color = "#2c3e50",
+      fillOpacity = 0.8
+    )
+
+  for (i in seq_len(nrow(tabela_com_coordenadas))) {
+    voo_atual <- tabela_com_coordenadas[i, ]
+    
+    espessura_linha <- scales::rescale(
+      voo_atual$velocidade_media_mph,
+      to = c(2, 8),
+      from = range(tabela_com_coordenadas$velocidade_media_mph, na.rm = TRUE)
+    )
+
+    texto_popup <- str_glue("
+  <b>Voo nº:</b> {i} de {nrow(tabela_com_coordenadas)}<br>
+  <b>Data:</b> {format(voo_atual$data_hora_partida, '%d/%m/%Y %H:%M')}<br>
+  <b>Trecho:</b> {voo_atual$ORIGIN_AIRPORT} ➔ {voo_atual$DESTINATION_AIRPORT}<br>
+  <b>Distância:</b> {voo_atual$DISTANCE} milhas<br>
+  <b>Velocidade Média:</b> {round(voo_atual$velocidade_media_mph, 1)} mph
+")
+
+    mapa_trajeto <- mapa_trajeto %>%
+      addPolylines(
+        lng = c(voo_atual$lng_origem, voo_atual$lng_destino),
+        lat = c(voo_atual$lat_origem, voo_atual$lat_destino),
+        weight = espessura_linha,
+        color = "#9D00FF",
+        opacity = 0.4,
+        popup = texto_popup
+      )
+  }
+
+  # 6. Retorno
+  resultado <- list(
+    tabela = tabela_trajetos_tidy,
+    mapa = mapa_trajeto
+  )
+
+  return(resultado)
+}
+```
+
+```{r}
+# Mostrar o mapa
+resultado <- analisa_aeronave(
+  tail_number = "N527AS", 
+  arquivo = "flights.csv.zip", 
+  arquivo_airports = "airports.csv"
+)
+
+resultado$mapa
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
