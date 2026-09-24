@@ -1,0 +1,136 @@
+---
+title: "Lab 07"
+author: "Bruce Trevisan"
+format: pdf
+editor: visual
+---
+
+### 1. Baixe o arquivo uwmadison.sqlite3. Conecte-se a ele usando o pacote RSQLite, armazenando a conexão em uma variável conn.
+
+```{r}
+library(DBI)
+library(RSQLite)
+
+conn <- dbConnect(RSQLite::SQLite(), "./database.sqlite3")
+```
+
+```{r}
+dbListTables(conn)
+```
+
+### 2. Quem são e quantos são os professores que lecionaram disciplinas cujo tópico era estatística (subjects.abbreviation='STAT');
+
+```{sql connection=conn}
+SELECT DISTINCT i.name AS lista_professores
+FROM instructors i
+JOIN teachings t ON i.id = t.instructor_id
+JOIN sections s ON t.section_uuid = s.uuid
+JOIN course_offerings co ON s.course_offering_uuid = co.uuid
+JOIN subject_memberships sm ON sm.course_offering_uuid = co.uuid
+JOIN subjects sub ON sm.subject_code = sub.code
+WHERE sub.abbreviation = 'STAT'
+ORDER BY i.name;
+```
+
+### 3. O GPA americano é definido numa escala de 0 a 4, em que A = 4, AB = 3.5, B = 3, BC = 2.5, C = 2, D = 1 e F = 0. Determinando a nota média de cada oferecimento pela ponderação da quantidade de alunos em cada extrato com os valores numéricos de cada conceito, indique (no que se referente a disciplinas no assunto de estatística):
+
+```{sql connection=conn}
+SELECT 
+    co.uuid AS course_offering_uuid,
+    co.name AS nome_curso,
+    (SUM(gd.a_count * 4.0 + gd.ab_count * 3.5 + gd.b_count * 3.0 + gd.bc_count * 2.5 + gd.c_count * 2.0 + gd.d_count * 1.0 + gd.f_count * 0.0) / 
+     NULLIF(SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count), 0)) AS media_gpa
+FROM course_offerings co
+JOIN subject_memberships sm ON co.uuid = sm.course_offering_uuid
+JOIN subjects sub ON sm.subject_code = sub.code
+JOIN grade_distributions gd ON co.uuid = gd.course_offering_uuid
+WHERE sub.abbreviation = 'STAT'
+GROUP BY co.uuid, co.name;
+```
+
+### 4. Quem é o professor mais difícil? Quem é o professor mais fácil? Qual é a disciplina mais difícil? Qual é a disciplina mais fácil?
+
+Professor Mais Difícil (Menor GPA):
+```{sql connection=conn}
+SELECT 
+    i.name AS lista_professores,
+    (SUM(gd.a_count * 4.0 + gd.ab_count * 3.5 + gd.b_count * 3.0 + gd.bc_count * 2.5 + gd.c_count * 2.0 + gd.d_count * 1.0 + gd.f_count * 0.0) / 
+     NULLIF(SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count), 0)) AS media_gpa
+FROM instructors i
+JOIN teachings t ON i.id = t.instructor_id
+JOIN sections s ON t.section_uuid = s.uuid
+JOIN course_offerings co ON s.course_offering_uuid = co.uuid
+JOIN subject_memberships sm ON sm.course_offering_uuid = co.uuid
+JOIN subjects sub ON sm.subject_code = sub.code
+JOIN grade_distributions gd ON co.uuid = gd.course_offering_uuid
+WHERE sub.abbreviation = 'STAT'
+GROUP BY i.id, i.name
+HAVING SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count) > 0
+ORDER BY media_gpa
+LIMIT 1
+```
+
+Professor mais fácil (Maior GPA):
+```{sql connection=conn}
+SELECT 
+    i.name AS lista_professores,
+    (SUM(gd.a_count * 4.0 + gd.ab_count * 3.5 + gd.b_count * 3.0 + gd.bc_count * 2.5 + gd.c_count * 2.0 + gd.d_count * 1.0 + gd.f_count * 0.0) / 
+     NULLIF(SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count), 0)) AS media_gpa
+FROM instructors i
+JOIN teachings t ON i.id = t.instructor_id
+JOIN sections s ON t.section_uuid = s.uuid
+JOIN course_offerings co ON s.course_offering_uuid = co.uuid
+JOIN subject_memberships sm ON sm.course_offering_uuid = co.uuid
+JOIN subjects sub ON sm.subject_code = sub.code
+JOIN grade_distributions gd ON co.uuid = gd.course_offering_uuid
+WHERE sub.abbreviation = 'STAT'
+GROUP BY i.id, i.name
+HAVING SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count) > 0
+ORDER BY media_gpa DESC
+LIMIT 1
+```
+
+Disciplina Mais Difícil (Menor GPA):
+```{sql connection=conn}
+SELECT 
+    co.name AS nome_curso,
+    (SUM(gd.a_count * 4.0 + gd.ab_count * 3.5 + gd.b_count * 3.0 + gd.bc_count * 2.5 + gd.c_count * 2.0 + gd.d_count * 1.0 + gd.f_count * 0.0) / 
+     NULLIF(SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count), 0)) AS media_gpa
+FROM course_offerings co
+JOIN subject_memberships sm ON co.uuid = sm.course_offering_uuid
+JOIN subjects sub ON sm.subject_code = sub.code
+JOIN grade_distributions gd ON co.uuid = gd.course_offering_uuid
+WHERE sub.abbreviation = 'STAT'
+GROUP BY co.uuid, co.name
+HAVING SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count) > 0
+ORDER BY media_gpa
+LIMIT 1
+```
+
+Disciplina Mais Fácil (Maior GPA):
+```{sql connection=conn}
+SELECT 
+    co.name AS nome_curso,
+    (SUM(gd.a_count * 4.0 + gd.ab_count * 3.5 + gd.b_count * 3.0 + gd.bc_count * 2.5 + gd.c_count * 2.0 + gd.d_count * 1.0 + gd.f_count * 0.0) / 
+     NULLIF(SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count), 0)) AS media_gpa
+FROM course_offerings co
+JOIN subject_memberships sm ON co.uuid = sm.course_offering_uuid
+JOIN subjects sub ON sm.subject_code = sub.code
+JOIN grade_distributions gd ON co.uuid = gd.course_offering_uuid
+WHERE sub.abbreviation = 'STAT'
+GROUP BY co.uuid, co.name
+HAVING SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count) > 0
+ORDER BY media_gpa DESC
+LIMIT 1
+```
+
+### 5. Desconecte do banco de dados.
+
+```{r}
+dbDisconnect(conn)
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
