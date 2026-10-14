@@ -1,0 +1,107 @@
+---
+title: "Lab 02 - Python - Trevisan - 277200"
+format: pdf
+editor: visual
+---
+
+Carregamento dos Datasets
+
+```{r}
+library(Replicate)
+```
+
+```{r}
+reticulate::py_require("polars")
+```
+
+```{python}
+import polars as pl
+```
+
+```{python}
+basics = pl.scan_csv(
+    "title.basics0.tsv.gz",
+    separator="\t",
+    null_values="\\N",
+    infer_schema_length=10000
+)
+
+ratings = pl.scan_csv(
+    "title.ratings.tsv.gz",
+    separator="\t",
+    null_values="\\N"
+).with_columns(
+    pl.col("averageRating").cast(pl.Float64),
+    pl.col("numVotes").cast(pl.Int64)
+)
+
+principals = pl.scan_csv(
+    "title.principals0.tsv.gz",
+    separator="\t",
+    null_values="\\N"
+)
+```
+
+
+### 1. Quais são os 5 filmes com as maiores notas (averageRating)? Apresente uma solução capaz de desempatar os filmes baseando-se no número de votos recebidos.
+
+```{python}
+q1 = (
+    ratings
+    .join(basics.filter(pl.col("titleType") == "movie"), on="tconst", how="inner")
+    .sort(by=["averageRating", "numVotes"], descending=[True, True])
+    .head(5)
+    .select(["tconst", "primaryTitle", "averageRating", "numVotes", "startYear"])
+).collect()
+
+print(q1)
+```
+
+Solução para desempate:
+Filtrar os registros para considerar apenas itens do tipo filme,então juntamos as tabelas de avaliações e informações básicas, e ordenamos de forma decrescente tanto pela nota quanto pelo número de votos para o desempate.
+
+### 2. Qual é o gênero mais frequente entre os filmes com nota maior que 8?
+
+```{python}
+q2 = (
+    ratings
+    .filter(pl.col("averageRating") > 8.0)
+    .join(basics.filter(pl.col("titleType") == "movie"), on="tconst", how="inner")
+    .with_columns(pl.col("genres").str.split(","))
+    .explode("genres")
+    .filter(pl.col("genres").is_not_null() & (pl.col("genres") != ""))
+    .group_by("genres")
+    .agg(pl.len().alias("frequency"))
+    .sort("frequency", descending=True)
+    .head(1)
+).collect()
+
+print(q2)
+```
+
+### 3. Quais são os 3 atores/atrizes que mais participaram de filmes com nota maior que 7.5?
+
+```{python}
+movies_high_rating = (
+    ratings
+    .filter(pl.col("averageRating") > 7.5)
+    .join(basics.filter(pl.col("titleType") == "movie"), on="tconst", how="inner")
+)
+
+q3 = (
+    principals
+    .filter(pl.col("category").is_in(["actor", "actress"]))
+    .join(movies_high_rating, on="tconst", how="inner")
+    .group_by("nconst")
+    .agg(pl.len().alias("appearance_count"))
+    .sort("appearance_count", descending=True)
+    .head(3)
+).collect()
+
+print(q3)
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
