@@ -1,0 +1,87 @@
+---
+title: "Lab 09 python"
+author: "Bruce Trevisan"
+format: pdf
+editor: visual
+---
+
+### Atividades
+
+### 1. Importe o conjunto de dados diamonds, cujo arquivo está disponível no website da disciplina.
+
+```{r}
+library(reticulate)
+py_install(c("pandas", "plotnine")) 
+```
+
+```{python}
+import pandas as pd
+from plotnine import *
+from plotnine.data import diamonds # importar do jeito classico não foi, precisei fazer dessa forma
+```
+
+```{python}
+print(diamonds.head())
+```
+
+### 2. Crie uma visualização de dados que descreva a associação existente entre as variáveis peso (carat) e preço (price). Que ações você tomou para garantir que você produziu um gráfico de boa qualidade? Escreva um parágrafo comunicando os seus achados.
+
+```{python}
+grafico_peso_preco = (
+    ggplot(diamonds, aes(x='carat', y='price')) 
+    + geom_point(alpha=0.1, size=0.5, color="#0072B2") # alpha e size reduzem o overplotting
+    + theme_minimal()
+    + labs(
+        title="Relação entre Peso e Preço dos Diamantes", 
+        x="Peso (Quilates)", 
+        y="Preço (USD)"
+    )
+)
+print(grafico_peso_preco)
+```
+
+### 3. A relação identificada na questão anterior é a mesma relação presente nos diferentes cortes de diamantes? Crie uma visualização que demonstre seus achados eficientemente. Descreva sua conclusão em um parágrafo.
+
+```{python}
+grafico_corte = (
+    ggplot(diamonds, aes(x='carat', y='price', color='cut')) 
+    + geom_point(alpha=0.15, size=0.5) 
+    + facet_wrap('~cut')
+    + theme_minimal()
+    + theme(legend_position="none") 
+    + labs(
+        title="Peso vs Preço por Qualidade do Corte", 
+        x="Peso (Quilates)", 
+        y="Preço (USD)"
+    )
+)
+print(grafico_corte)
+```
+
+A relação positiva entre peso e preço se mantém consistente em todos os tipos de corte. No entanto, é visível que cortes de qualidade superior, que são as "Ideal" e "Premium", atingem preços máximos com quilates menores, apresentando uma curva mais inclinada.
+Em contraste, o corte "Fair" exige diamantes significativamente mais pesados para alcançar a mesma faixa de preço alto.
+
+### 4. Crie uma visualização que mostre a relação entre preço e peso do diamante, considerando as diferentes combinações de qualidade de corte, cor e clareza do diamante. Quais foram as dificuldades encontradas? A relação entre preço e peso é a mesma para diferentes configurações de diamantes?
+
+```{python}
+grafico_complexo = (
+    ggplot(diamonds, aes(x='carat', y='price', color='cut')) 
+    + geom_point(alpha=0.3, size=0.5) 
+    + facet_grid('color ~ clarity')
+    + theme_minimal()
+    + theme(figure_size=(14, 10))
+    + labs(
+        title="Relação Preço x Peso cruzada por Cor e Clareza", 
+        x="Peso (Quilates)", 
+        y="Preço (USD)"
+    )
+)
+print(grafico_complexo)
+```
+
+A relação positiva geral entre preço e peso continua sendo a mesma em todas as configurações. O que muda drasticamente é a inclinação da curva e a dispersão; combinações de alta clareza (ex: IF, VVS1) e melhor cor (D, E) apresentam um aumento de preço muito rápido com o mínimo de peso, enquanto combinações piores (Cor J, Clareza I1) mostram um crescimento muito mais lento e achatado por conta da qualidade.
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
