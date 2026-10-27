@@ -1,0 +1,74 @@
+---
+title: "Teste de analise - SJR 2022-25"
+format: pdf
+editor: visual
+---
+
+### PACOTES
+
+```{r}
+library(tidyverse)
+library(DBI)
+library(RSQLite)
+```
+
+### Junção de planilhas/tabelas
+```{r}
+# juntar as 4 planilhas em 1, para assim limpar e trabalhar com elas, pq assim poupa trabalho extra, mas qualquer coisa podemos fazer separado, caso de algum erro e afins.
+arquivos_csv <- list.files(pattern = "^sjr.*\\.csv$", full.names = TRUE)
+
+# le  e empilha todos os arquivos, criando a coluna 'Ano'
+dados_brutos <- map_dfr(arquivos_csv, function(caminho_arquivo) {
+  
+  # extrai os 4 dígitos numéricos do nome do arquivo
+  ano_arquivo <- str_extract(caminho_arquivo, "\\d{4}")
+  
+  # le o arquivo utilizando ; como separador
+  df <- read_delim(caminho_arquivo, delim = ";", escape_double = FALSE, trim_ws = TRUE, show_col_types = FALSE)
+  
+  # colpca a coluna Ano
+  df |> mutate(Ano = as.numeric(ano_arquivo))
+})
+
+# processa os dados: expansão de tópicos e cálculo de porcentagem
+dados_processados <- dados_brutos |>
+  # deixa apenas colunas necessárias para o banco
+  select(Sourceid, Title, Issn, Type, Categories, SJR, Ano) |>
+  
+  # faz uma linha nova para cada tópico separado por ;
+  separate_rows(Categories, sep = ";\\s*") |>
+  
+  mutate(
+    # tira os indicadores de quartil, ex: " (Q1)", deixando o nome limpo do tópico
+    Topico = str_remove(Categories, "\\s*\\(Q[1-4]\\)"),
+    
+    # converte o SJR para numérico (troca virguls por pontp)
+    SJR = as.numeric(str_replace(SJR, ",", "."))
+  ) |>
+  
+  # agrupa os dados para calcular a porcentagem por topico e ano
+  group_by(Ano, Topico) |>
+  mutate(SJR_Percentual = (SJR / max(SJR, na.rm = TRUE)) * 100) |>
+  ungroup() |>
+  
+  # remove a coluna original Categories que ja foi processada
+  select(-Categories)
+```
+
+```{r}
+# conferir se deu certo essa junção de 4 planilhas (de cada ano) 
+table(dados_processados$Ano)
+```
+
+
+```{r}
+# AINDA NÃO MEXI NISSO DO SQLITE
+
+# con <- dbConnect(RSQLite::SQLite(), "banco_sjr.db")
+
+# vai criar a tabela com os dados prontos para a analise
+# dbWriteTable(con, "notas_revistas", dados_processados, overwrite = TRUE)
+```
+
+
+
