@@ -62,11 +62,10 @@ table(dados_processados$Ano)
 
 
 ```{r}
-# AINDA NÃO MEXI NISSO DO SQLITE
+# AINDA NÃO MEXI NISSO DO SQLITE - COLOQUEI PRA N ESQUECER - por isso ta com # de comentario td desse chunk
 
 # con <- dbConnect(RSQLite::SQLite(), "banco_sjr.db")
 
-# vai criar a tabela com os dados prontos para a analise
 # dbWriteTable(con, "notas_revistas", dados_processados, overwrite = TRUE)
 ```
 
